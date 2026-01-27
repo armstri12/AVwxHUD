@@ -54,6 +54,8 @@ python simulator.py KJFK
 - `ESC` or `Q` - Quit
 - `S` - Save screenshot
 
+**Note:** The AVWX API requires a free token. If you don't have one, the display will automatically run in **DEMO MODE** with simulated weather data that cycles through different conditions. See [API Token](#api-token-optional) section below to get a free token for real weather data.
+
 ### 2. Hardware (Raspberry Pi)
 
 ```bash
@@ -153,17 +155,39 @@ The display features animated pixel art icons:
 - ⛈️ **Thunderstorm** - Cloud with flashing lightning bolt
 - 🌫️ **Fog** - Horizontal fog layers
 
-## API Token (Optional)
+## API Token (Required for Real Weather Data)
 
-For production use or frequent updates, get a free API token from [AVWX.rest](https://avwx.rest):
+**UPDATE:** The AVWX API now requires authentication. Without a token, the display runs in **DEMO MODE** with simulated weather data.
+
+### Get Your Free API Token
+
+Get a free API token from [AVWX.rest](https://avwx.rest):
 
 1. Visit https://avwx.rest
-2. Create a free account
-3. Get your API token
-4. Add to `config/config.json` or use `--token` flag
+2. Click "Sign Up" and create a free account
+3. Go to your dashboard and copy your API token
+4. Add to `config/config.json`:
+   ```json
+   {
+     "airport": "KJFK",
+     "api_token": "YOUR_TOKEN_HERE"
+   }
+   ```
 
-Free tier: 4000 requests/day
-With token: Higher rate limits available
+   OR use `--token` flag:
+   ```bash
+   python simulator.py KJFK --token YOUR_TOKEN_HERE
+   ```
+
+**Free tier:** 4000 requests/day (more than enough for this project!)
+
+### Demo Mode
+
+Without a token, the display automatically enters demo mode which:
+- Cycles through 5 different weather scenarios every 30 seconds
+- Shows VFR, MVFR, IFR conditions with different weather
+- Demonstrates all animations (sun, clouds, rain, snow, lightning)
+- Perfect for testing and development!
 
 ## Project Structure
 
