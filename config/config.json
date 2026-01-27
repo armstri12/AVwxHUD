@@ -1,0 +1,17 @@
+{
+  "airport": "KJFK",
+  "api_token": null,
+  "width": 64,
+  "height": 32,
+  "brightness": 75,
+  "update_interval": 300,
+  "comment": "Configuration for Aviation Weather HUD",
+  "help": {
+    "airport": "ICAO airport code (e.g., KJFK, KSFO, EGLL, KATL)",
+    "api_token": "Optional AVWX API token for higher rate limits (get from https://avwx.rest)",
+    "width": "LED matrix width in pixels (typically 64)",
+    "height": "LED matrix height in pixels (typically 32)",
+    "brightness": "LED brightness percentage (0-100)",
+    "update_interval": "Seconds between weather data updates (minimum 60, recommended 300)"
+  }
+}
