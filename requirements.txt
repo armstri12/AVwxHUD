@@ -1,0 +1,15 @@
+# Aviation Weather HUD Requirements
+
+# Core dependencies
+Pillow>=10.0.0          # Image processing
+requests>=2.31.0        # HTTP requests for weather data
+pygame>=2.5.0           # Simulator display
+
+# Hardware support (Raspberry Pi only)
+# Uncomment the line below when installing on Raspberry Pi:
+# rgbmatrix>=0.0.1      # RGB LED Matrix library
+# Install with: sudo pip3 install rgbmatrix
+
+# Optional dependencies
+# pytz>=2023.3          # Timezone support
+# python-dotenv>=1.0.0  # Environment variable management
