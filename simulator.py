@@ -15,9 +15,10 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python simulator.py KJFK              # Display weather for JFK airport
-  python simulator.py KSFO --size 15    # Larger display (15px per LED)
-  python simulator.py EGLL --token YOUR_TOKEN  # Use API token for higher limits
+  python simulator.py KJFK                    # Display weather for JFK airport
+  python simulator.py KSFO --size 24          # Larger display
+  python simulator.py EGLL --style square     # Square LEDs instead of round
+  python simulator.py KJFK --token YOUR_TOKEN # Use API token for real weather
 
 Controls:
   ESC or Q - Quit
@@ -40,8 +41,16 @@ Flight Categories (color coded):
     parser.add_argument(
         '--size',
         type=int,
-        default=12,
-        help='Size of each LED pixel in pixels (default: 12)'
+        default=20,
+        help='Size of each LED pixel in pixels (default: 20 for ~5mm pitch)'
+    )
+
+    parser.add_argument(
+        '--style',
+        type=str,
+        default='round',
+        choices=['round', 'square'],
+        help='LED style: round (default) or square'
     )
 
     parser.add_argument(
@@ -83,7 +92,8 @@ Flight Categories (color coded):
     print("Aviation Weather HUD Simulator")
     print("=" * 60)
     print(f"Airport: {args.airport.upper()}")
-    print(f"Display: {args.width}x{args.height} @ {args.size}px per LED")
+    print(f"Display: {args.width}x{args.height} @ {args.size}px per LED (~{args.size//2}mm pitch)")
+    print(f"LED Style: {args.style}")
     print(f"Update interval: {args.update} seconds")
     print()
     print("Press ESC or Q to quit, S to save screenshot")
@@ -95,7 +105,8 @@ Flight Categories (color coded):
         display = SimulatorDisplay(
             width=args.width,
             height=args.height,
-            pixel_size=args.size
+            pixel_size=args.size,
+            led_style=args.style
         )
 
         # Create controller
