@@ -37,12 +37,19 @@ class WeatherFetcher:
             if response.status_code == 200:
                 data = response.json()
                 return self._parse_metar(data)
+            elif response.status_code == 401:
+                print(f"Error fetching METAR: 401 Unauthorized")
+                print(f"API token required. Get free token at: https://avwx.rest")
+                print(f"Using DEMO mode with sample data...")
+                return self._get_demo_data(airport_code.upper())
             else:
                 print(f"Error fetching METAR: {response.status_code}")
-                return None
+                print(f"Using DEMO mode with sample data...")
+                return self._get_demo_data(airport_code.upper())
         except Exception as e:
             print(f"Exception fetching METAR: {e}")
-            return None
+            print(f"Using DEMO mode with sample data...")
+            return self._get_demo_data(airport_code.upper())
 
     def _parse_metar(self, data: Dict) -> Dict:
         """Parse METAR API response into simplified format"""
@@ -111,6 +118,89 @@ class WeatherFetcher:
                 'error': str(e),
                 'raw': data.get('raw', '')
             }
+
+    def _get_demo_data(self, airport_code: str) -> Dict:
+        """
+        Generate demo weather data for testing without API
+        Args:
+            airport_code: Airport code to display
+        Returns:
+            Dictionary with sample weather data
+        """
+        import random
+
+        # Cycle through different weather conditions for demo
+        weather_scenarios = [
+            {
+                'flight_rules': 'VFR',
+                'temperature': 22,
+                'wind_speed': 8,
+                'wind_direction': 270,
+                'visibility': 10.0,
+                'altimeter': 30.12,
+                'conditions': [],
+                'clouds': [{'type': 'FEW', 'altitude': 50, 'repr': 'FEW050'}]
+            },
+            {
+                'flight_rules': 'MVFR',
+                'temperature': 15,
+                'wind_speed': 12,
+                'wind_direction': 180,
+                'visibility': 5.0,
+                'altimeter': 29.92,
+                'conditions': ['BR'],
+                'clouds': [{'type': 'BKN', 'altitude': 25, 'repr': 'BKN025'}]
+            },
+            {
+                'flight_rules': 'IFR',
+                'temperature': 8,
+                'wind_speed': 18,
+                'wind_direction': 90,
+                'visibility': 2.0,
+                'altimeter': 29.75,
+                'conditions': ['RA'],
+                'clouds': [{'type': 'OVC', 'altitude': 12, 'repr': 'OVC012'}]
+            },
+            {
+                'flight_rules': 'VFR',
+                'temperature': 28,
+                'wind_speed': 5,
+                'wind_direction': 45,
+                'visibility': 10.0,
+                'altimeter': 30.25,
+                'conditions': [],
+                'clouds': [{'type': 'SCT', 'altitude': 80, 'repr': 'SCT080'}]
+            },
+            {
+                'flight_rules': 'MVFR',
+                'temperature': -2,
+                'wind_speed': 15,
+                'wind_direction': 360,
+                'visibility': 4.0,
+                'altimeter': 30.05,
+                'conditions': ['SN'],
+                'clouds': [{'type': 'OVC', 'altitude': 20, 'repr': 'OVC020'}]
+            },
+        ]
+
+        # Select a scenario based on time (changes slowly)
+        import time
+        scenario_index = int(time.time() / 30) % len(weather_scenarios)
+        scenario = weather_scenarios[scenario_index]
+
+        return {
+            'station': airport_code,
+            'time': 'DEMO',
+            'flight_rules': scenario['flight_rules'],
+            'raw': f'{airport_code} DEMO MODE',
+            'temperature': scenario['temperature'],
+            'wind_direction': scenario['wind_direction'],
+            'wind_speed': scenario['wind_speed'],
+            'visibility': scenario['visibility'],
+            'altimeter': scenario['altimeter'],
+            'clouds': scenario['clouds'],
+            'conditions': scenario['conditions']
+        }
 
     def get_flight_category_color(self, flight_rules: str) -> tuple:
         """
