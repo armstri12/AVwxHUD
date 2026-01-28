@@ -61,7 +61,7 @@ class DisplayRenderer:
         # Draw temperature (top right)
         if temperature is not None:
             temp_str = f"{temperature}°"
-            self._draw_text(img, temp_str, self.width - len(temp_str) * 4 - 2, 4, (255, 200, 0))
+            self._draw_text(img, temp_str, self.width - len(temp_str) * 6 - 2, 4, (255, 200, 0))
 
         # Draw weather icon (left side, center)
         self._draw_weather_icon(img, weather_icon, 4, 14, frame)
@@ -133,7 +133,7 @@ class DisplayRenderer:
         self._draw_icon(img, airplane, x_offset, y_offset, (0, 200, 255))
 
         # Draw text below
-        self._draw_text(img, message[:10], (self.width - len(message) * 4) // 2, 20, (255, 255, 255))
+        self._draw_text(img, message[:10], (self.width - len(message[:10]) * 6) // 2, 20, (255, 255, 255))
 
         return img
 
@@ -237,18 +237,28 @@ class DisplayRenderer:
         text: str,
         x: int,
         y: int,
-        color: Tuple[int, int, int]
+        color: Tuple[int, int, int],
+        scale: int = 1
     ):
-        """Draw text using simple font (4 pixels wide per char + 1 spacing)"""
-        draw = ImageDraw.Draw(img)
+        """Draw text using custom pixel font (5 pixels wide per char + 1 spacing)"""
+        pixels = img.load()
+        x_offset = 0
 
-        # Use PIL's default font for simplicity (tiny font)
-        try:
-            # Try to use a small built-in font
-            draw.text((x, y), text, fill=color)
-        except:
-            # Fallback to basic drawing
-            draw.text((x, y), text, fill=color)
+        for char in str(text):
+            char_pattern = self.font.get_char(char)
+
+            if char_pattern:
+                # Draw each pixel of the character
+                for row_idx, row in enumerate(char_pattern):
+                    for col_idx, pixel in enumerate(row):
+                        if pixel:
+                            for sy in range(scale):
+                                for sx in range(scale):
+                                    draw_x = x + x_offset + col_idx * scale + sx
+                                    draw_y = y + row_idx * scale + sy
+                                    if 0 <= draw_x < self.width and 0 <= draw_y < self.height:
+                                        pixels[draw_x, draw_y] = color
+                x_offset += 6 * scale  # 5 pixels + 1 spacing
 
     def _draw_number(
         self,
@@ -258,21 +268,9 @@ class DisplayRenderer:
         y: int,
         color: Tuple[int, int, int]
     ):
-        """Draw number using custom 5x7 font"""
-        pixels = img.load()
-        x_offset = 0
-
-        for char in str(number):
-            if char in self.font.DIGITS:
-                digit = self.font.DIGITS[char]
-                for row_idx, row in enumerate(digit):
-                    for col_idx, pixel in enumerate(row):
-                        if pixel:
-                            draw_x = x + x_offset + col_idx
-                            draw_y = y + row_idx
-                            if 0 <= draw_x < self.width and 0 <= draw_y < self.height:
-                                pixels[draw_x, draw_y] = color
-                x_offset += 6  # 5 pixels + 1 spacing
+        """Draw number using custom 5x7 font (deprecated, use _draw_text instead)"""
+        # Just call _draw_text now
+        self._draw_text(img, number, x, y, color)
 
     def _get_flight_rules_color(self, flight_rules: str) -> Tuple[int, int, int]:
         """Get color for flight rules"""
