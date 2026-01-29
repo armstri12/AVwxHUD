@@ -37,7 +37,7 @@ class DisplayController:
         self.current_taf = None
         self.last_update = 0
         self.animation_frame = 0
-        self.display_mode = 0  # 0 = main, 1 = info
+        self.display_mode = 0  # 0 = METAR, 1 = TAF
         self.mode_timer = 0
 
     def update(self):
@@ -60,30 +60,42 @@ class DisplayController:
                 print(f"TAF updated: {len(self.current_taf.get('forecast', []))} periods")
 
     def render(self):
-        """Render current display"""
+        """Render current display - alternates between METAR and TAF"""
         if not self.current_weather:
             # Show loading/startup screen
             img = self.renderer.create_startup_display(f"LOADING {self.airport_code}")
             self.display.show_image(img)
             return
 
-        # Get weather icon
-        weather_icon = get_weather_icon(
-            self.current_weather.get('conditions', []),
-            self.current_weather.get('flight_rules', 'UNKNOWN')
-        )
+        # Alternate between METAR and TAF every 5 seconds
+        self.mode_timer += 1
+        if self.mode_timer >= 150:  # 5 seconds at 30fps
+            self.display_mode = 1 - self.display_mode
+            self.mode_timer = 0
 
-        # Render comprehensive display with METAR + TAF
-        img = self.renderer.create_weather_display(
-            station=self.current_weather.get('station', self.airport_code),
-            temperature=self.current_weather.get('temperature'),
-            wind_speed=self.current_weather.get('wind_speed'),
-            wind_direction=self.current_weather.get('wind_direction'),
-            flight_rules=self.current_weather.get('flight_rules', 'UNKNOWN'),
-            weather_icon=weather_icon,
-            frame=self.animation_frame,
-            taf_data=self.current_taf
-        )
+        # Render appropriate screen
+        if self.display_mode == 0:
+            # METAR screen
+            img = self.renderer.create_metar_display(
+                station=self.current_weather.get('station', self.airport_code),
+                temperature=self.current_weather.get('temperature'),
+                dewpoint=self.current_weather.get('dewpoint'),
+                wind_speed=self.current_weather.get('wind_speed'),
+                wind_direction=self.current_weather.get('wind_direction'),
+                visibility=self.current_weather.get('visibility'),
+                ceiling=self.current_weather.get('ceiling'),
+                flight_rules=self.current_weather.get('flight_rules', 'UNKNOWN'),
+                conditions=self.current_weather.get('conditions', []),
+                frame=self.animation_frame
+            )
+        else:
+            # TAF screen
+            img = self.renderer.create_taf_display(
+                station=self.current_weather.get('station', self.airport_code),
+                taf_data=self.current_taf,
+                flight_rules=self.current_weather.get('flight_rules', 'UNKNOWN'),
+                frame=self.animation_frame
+            )
 
         self.display.show_image(img)
 

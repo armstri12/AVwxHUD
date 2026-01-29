@@ -22,65 +22,140 @@ class DisplayRenderer:
         self.icons = AviationIcons()
         self.font = Font5x7()
 
-    def create_weather_display(
+    def create_metar_display(
         self,
         station: str,
         temperature: Optional[int],
+        dewpoint: Optional[int],
         wind_speed: Optional[int],
         wind_direction: Optional[int],
+        visibility: Optional[float],
+        ceiling: Optional[int],
         flight_rules: str,
-        weather_icon: str,
-        frame: int = 0,
-        taf_data: Optional[Dict] = None
+        conditions: list,
+        frame: int = 0
     ) -> Image.Image:
         """
-        Create complete weather display for 64x64 matrix
-        Args:
-            station: Airport code (e.g., 'KJFK')
-            temperature: Temperature in Celsius
-            wind_speed: Wind speed in knots
-            wind_direction: Wind direction in degrees
-            flight_rules: VFR, MVFR, IFR, or LIFR
-            weather_icon: Icon name (clear, cloudy, rain, snow, etc.)
-            frame: Animation frame number
-            taf_data: Optional TAF forecast data
-        Returns:
-            PIL Image ready for display
+        Create METAR display screen (64x64)
+        Shows: Temp, Dewpoint, Wind, Visibility, Ceiling, Conditions, Flight Rules
         """
-        # Create RGB image
         img = Image.new('RGB', (self.width, self.height), (0, 0, 0))
         draw = ImageDraw.Draw(img)
-
-        # Get flight category color
         color = self._get_flight_rules_color(flight_rules)
 
-        # TOP SECTION (0-13): Header with station, temp, flight category
-        # Status bar at top
+        # Header bar (rows 0-2)
         draw.rectangle([(0, 0), (self.width, 2)], fill=color)
 
-        # Station code (top left)
-        self._draw_text(img, station[:4], 2, 4, (255, 255, 255))
+        # "METAR" label (rows 3-10) - large and clear
+        self._draw_text(img, "METAR", 2, 3, (255, 255, 255))
 
-        # Temperature (top right)
-        if temperature is not None:
-            temp_str = f"{temperature}°"
-            self._draw_text(img, temp_str, self.width - len(temp_str) * 6 - 2, 4, (255, 200, 0))
+        # Station code (top right)
+        self._draw_text(img, station[:4], self.width - 26, 3, (200, 200, 200))
 
-        # Flight category badge
-        self._draw_text(img, flight_rules[:4], 2, 12, color)
+        # Flight rules badge (below METAR)
+        self._draw_text(img, flight_rules[:4], 2, 11, color)
 
-        # MIDDLE SECTION (14-46): Weather icon and wind
-        # Large weather icon (left/center)
-        icon_y = 18
-        self._draw_weather_icon(img, weather_icon, 8, icon_y, frame)
+        # Data section starts at row 19
+        y = 19
 
-        # Wind information (right side) with bigger arrow and direction degrees
+        # Temperature / Dewpoint
+        if temperature is not None and dewpoint is not None:
+            temp_text = f"T {temperature:3d} D{dewpoint:3d}"
+            self._draw_text(img, temp_text, 2, y, (255, 200, 0))
+        y += 8
+
+        # Wind
         if wind_speed is not None and wind_direction is not None:
-            self._draw_wind_large(img, wind_speed, wind_direction, 38, 20, frame)
+            wind_text = f"W{wind_direction:03d}/{wind_speed:02d}KT"
+            self._draw_text(img, wind_text, 2, y, (0, 255, 200))
+        y += 8
 
-        # BOTTOM SECTION (47-63): TAF Forecast
-        if taf_data and taf_data.get('forecast'):
-            self._draw_taf_forecast(img, taf_data, 0, 48, frame)
+        # Visibility
+        if visibility is not None:
+            if visibility >= 10:
+                vis_text = f"V 10SM"
+            else:
+                vis_text = f"V {visibility:.1f}SM"
+            self._draw_text(img, vis_text, 2, y, (100, 200, 255))
+        y += 8
+
+        # Ceiling
+        if ceiling is not None:
+            # Display in hundreds of feet
+            ceil_hund = ceiling // 100
+            ceil_text = f"C {ceil_hund:03d}"
+            self._draw_text(img, ceil_text, 2, y, (255, 150, 255))
+        else:
+            self._draw_text(img, "C CLR", 2, y, (100, 100, 100))
+        y += 8
+
+        # Conditions
+        if conditions:
+            cond_text = ' '.join(conditions[:2])  # Max 2 conditions
+            self._draw_text(img, cond_text[:10], 2, y, (200, 200, 200))
+
+        return img
+
+    def create_taf_display(
+        self,
+        station: str,
+        taf_data: Dict,
+        flight_rules: str,
+        frame: int = 0
+    ) -> Image.Image:
+        """
+        Create TAF forecast display screen (64x64)
+        Shows multiple forecast periods
+        """
+        img = Image.new('RGB', (self.width, self.height), (0, 0, 0))
+        draw = ImageDraw.Draw(img)
+        color = self._get_flight_rules_color(flight_rules)
+
+        # Header bar
+        draw.rectangle([(0, 0), (self.width, 2)], fill=color)
+
+        # "TAF" label - large and clear
+        self._draw_text(img, "TAF", 2, 3, (255, 255, 255))
+
+        # Station code (top right)
+        self._draw_text(img, station[:4], self.width - 26, 3, (200, 200, 200))
+
+        # Current conditions badge
+        self._draw_text(img, flight_rules[:4], 2, 11, color)
+
+        # TAF data starts at row 19
+        if not taf_data or not taf_data.get('forecast'):
+            self._draw_text(img, "NO TAF", 2, 25, (150, 150, 150))
+            return img
+
+        y = 19
+        forecast = taf_data.get('forecast', [])
+
+        # Show up to 5 forecast periods
+        for i, period in enumerate(forecast[:5]):
+            if y + 8 > self.height:
+                break
+
+            # Flight category indicator (small colored square)
+            fr = period.get('flight_rules', 'UNKN')
+            period_color = self._get_flight_rules_color(fr)
+            draw.rectangle([(2, y), (4, y + 6)], fill=period_color)
+
+            # Wind direction/speed
+            wind_dir = period.get('wind_direction')
+            wind_spd = period.get('wind_speed')
+            vis = period.get('visibility')
+
+            if wind_dir is not None and wind_spd is not None:
+                wind_text = f"{wind_dir:03d}/{wind_spd:02d}"
+                self._draw_text(img, wind_text, 6, y, (100, 200, 255))
+
+            # Visibility on same line (right side)
+            if vis is not None and vis < 10:
+                vis_text = f"{vis:.1f}"
+                self._draw_text(img, vis_text, 45, y, (255, 200, 100))
+
+            y += 8
 
         return img
 
