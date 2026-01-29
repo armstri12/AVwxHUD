@@ -105,7 +105,7 @@ class DisplayRenderer:
     ) -> Image.Image:
         """
         Create TAF forecast display screen (64x64)
-        Shows multiple forecast periods
+        Shows multiple forecast periods with clear time blocks
         """
         img = Image.new('RGB', (self.width, self.height), (0, 0, 0))
         draw = ImageDraw.Draw(img)
@@ -120,42 +120,48 @@ class DisplayRenderer:
         # Station code (top right)
         self._draw_text(img, station[:4], self.width - 26, 3, (200, 200, 200))
 
-        # Current conditions badge
-        self._draw_text(img, flight_rules[:4], 2, 11, color)
-
-        # TAF data starts at row 19
+        # TAF data starts at row 11
         if not taf_data or not taf_data.get('forecast'):
-            self._draw_text(img, "NO TAF", 2, 25, (150, 150, 150))
+            self._draw_text(img, "NO TAF", 2, 20, (150, 150, 150))
             return img
 
-        y = 19
+        y = 11
         forecast = taf_data.get('forecast', [])
 
         # Show up to 5 forecast periods
         for i, period in enumerate(forecast[:5]):
-            if y + 8 > self.height:
+            if y + 10 > self.height:
                 break
 
-            # Flight category indicator (small colored square)
+            # Flight category color bar (left edge, full block height)
             fr = period.get('flight_rules', 'UNKN')
             period_color = self._get_flight_rules_color(fr)
-            draw.rectangle([(2, y), (4, y + 6)], fill=period_color)
+            draw.rectangle([(0, y), (1, y + 9)], fill=period_color)
 
-            # Wind direction/speed
+            # Convert time from UTC to CST (UTC-6)
+            start_time = period.get('start_time', '')
+            time_str = self._convert_to_cst_24hr(start_time)
+
+            # Time in 24hr CST format (row 1 of block)
+            if time_str:
+                self._draw_text(img, time_str, 3, y, (200, 200, 255))
+
+            # Wind direction/speed (row 2 of block)
             wind_dir = period.get('wind_direction')
             wind_spd = period.get('wind_speed')
-            vis = period.get('visibility')
+            ceiling = period.get('ceiling')
 
             if wind_dir is not None and wind_spd is not None:
-                wind_text = f"{wind_dir:03d}/{wind_spd:02d}"
-                self._draw_text(img, wind_text, 6, y, (100, 200, 255))
+                wind_text = f"W{wind_dir:03d}/{wind_spd:02d}"
+                self._draw_text(img, wind_text, 3, y + 5, (100, 200, 255))
 
-            # Visibility on same line (right side)
-            if vis is not None and vis < 10:
-                vis_text = f"{vis:.1f}"
-                self._draw_text(img, vis_text, 45, y, (255, 200, 100))
+            # Ceiling on same line (right side)
+            if ceiling is not None:
+                ceil_hund = ceiling // 100
+                ceil_text = f"C{ceil_hund:03d}"
+                self._draw_text(img, ceil_text, 38, y + 5, (255, 150, 255))
 
-            y += 8
+            y += 10  # Move to next time block
 
         return img
 
@@ -424,6 +430,32 @@ class DisplayRenderer:
         """Draw number using custom 5x7 font (deprecated, use _draw_text instead)"""
         # Just call _draw_text now
         self._draw_text(img, number, x, y, color)
+
+    def _convert_to_cst_24hr(self, utc_time_str: str) -> str:
+        """
+        Convert UTC time string to CST 24-hour format
+        Args:
+            utc_time_str: Time string like "1823" (HHMM in UTC)
+        Returns:
+            Time string in CST 24hr format like "12:23"
+        """
+        if not utc_time_str or len(utc_time_str) < 4:
+            return ""
+
+        try:
+            # Extract hours and minutes from HHMM format
+            utc_hour = int(utc_time_str[:2])
+            utc_min = int(utc_time_str[2:4])
+
+            # Convert to CST (UTC-6)
+            cst_hour = utc_hour - 6
+            if cst_hour < 0:
+                cst_hour += 24
+
+            # Format as HH:MM
+            return f"{cst_hour:02d}:{utc_min:02d}"
+        except (ValueError, IndexError):
+            return ""
 
     def _get_flight_rules_color(self, flight_rules: str) -> Tuple[int, int, int]:
         """Get color for flight rules"""
