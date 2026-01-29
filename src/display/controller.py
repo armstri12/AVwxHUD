@@ -34,6 +34,7 @@ class DisplayController:
         self.renderer = DisplayRenderer()
 
         self.current_weather = None
+        self.current_taf = None
         self.last_update = 0
         self.animation_frame = 0
         self.display_mode = 0  # 0 = main, 1 = info
@@ -47,12 +48,16 @@ class DisplayController:
         if current_time - self.last_update >= self.update_interval:
             print(f"Fetching weather for {self.airport_code}...")
             self.current_weather = self.weather_fetcher.get_metar(self.airport_code)
+            self.current_taf = self.weather_fetcher.get_taf(self.airport_code)
             self.last_update = current_time
 
             if self.current_weather:
                 print(f"Weather updated: {self.current_weather.get('flight_rules', 'N/A')}")
             else:
                 print("Failed to fetch weather data")
+
+            if self.current_taf:
+                print(f"TAF updated: {len(self.current_taf.get('forecast', []))} periods")
 
     def render(self):
         """Render current display"""
@@ -62,40 +67,23 @@ class DisplayController:
             self.display.show_image(img)
             return
 
-        # Alternate between display modes every 10 seconds
-        self.mode_timer += 1
-        if self.mode_timer >= 300:  # 10 seconds at 30fps
-            self.display_mode = 1 - self.display_mode
-            self.mode_timer = 0
-
         # Get weather icon
         weather_icon = get_weather_icon(
             self.current_weather.get('conditions', []),
             self.current_weather.get('flight_rules', 'UNKNOWN')
         )
 
-        # Render based on mode
-        if self.display_mode == 0:
-            # Main weather display
-            img = self.renderer.create_weather_display(
-                station=self.current_weather.get('station', self.airport_code),
-                temperature=self.current_weather.get('temperature'),
-                wind_speed=self.current_weather.get('wind_speed'),
-                wind_direction=self.current_weather.get('wind_direction'),
-                flight_rules=self.current_weather.get('flight_rules', 'UNKNOWN'),
-                weather_icon=weather_icon,
-                frame=self.animation_frame
-            )
-        else:
-            # Info display (visibility, altimeter, clouds)
-            img = self.renderer.create_info_display(
-                station=self.current_weather.get('station', self.airport_code),
-                visibility=self.current_weather.get('visibility'),
-                altimeter=self.current_weather.get('altimeter'),
-                clouds=self.current_weather.get('clouds', []),
-                flight_rules=self.current_weather.get('flight_rules', 'UNKNOWN'),
-                frame=self.animation_frame
-            )
+        # Render comprehensive display with METAR + TAF
+        img = self.renderer.create_weather_display(
+            station=self.current_weather.get('station', self.airport_code),
+            temperature=self.current_weather.get('temperature'),
+            wind_speed=self.current_weather.get('wind_speed'),
+            wind_direction=self.current_weather.get('wind_direction'),
+            flight_rules=self.current_weather.get('flight_rules', 'UNKNOWN'),
+            weather_icon=weather_icon,
+            frame=self.animation_frame,
+            taf_data=self.current_taf
+        )
 
         self.display.show_image(img)
 

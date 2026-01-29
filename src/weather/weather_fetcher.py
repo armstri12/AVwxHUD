@@ -119,6 +119,84 @@ class WeatherFetcher:
                 'raw': data.get('raw', '')
             }
 
+    def get_taf(self, airport_code: str) -> Optional[Dict]:
+        """
+        Fetch TAF data for an airport
+        Args:
+            airport_code: ICAO airport code (e.g., 'KJFK')
+        Returns:
+            Dictionary with parsed TAF data or None if error
+        """
+        try:
+            url = f"{self.base_url}/taf/{airport_code.upper()}"
+            response = requests.get(url, headers=self.headers, timeout=10)
+
+            if response.status_code == 200:
+                data = response.json()
+                return self._parse_taf(data)
+            elif response.status_code == 401:
+                print(f"Error fetching TAF: 401 Unauthorized")
+                return self._get_demo_taf(airport_code.upper())
+            else:
+                print(f"Error fetching TAF: {response.status_code}")
+                return self._get_demo_taf(airport_code.upper())
+        except Exception as e:
+            print(f"Exception fetching TAF: {e}")
+            return self._get_demo_taf(airport_code.upper())
+
+    def _parse_taf(self, data: Dict) -> Dict:
+        """Parse TAF API response into simplified format"""
+        try:
+            result = {
+                'station': data.get('station', 'N/A'),
+                'time': data.get('time', {}).get('repr', 'N/A'),
+                'raw': data.get('raw', ''),
+                'forecast': []
+            }
+
+            # Get forecast periods
+            if 'forecast' in data and data['forecast']:
+                for period in data['forecast'][:3]:  # First 3 periods
+                    forecast_item = {
+                        'type': period.get('type', 'FM'),
+                        'wind_direction': None,
+                        'wind_speed': None,
+                        'visibility': None,
+                        'flight_rules': period.get('flight_rules', 'UNKNOWN')
+                    }
+
+                    if 'wind_direction' in period and period['wind_direction']:
+                        forecast_item['wind_direction'] = period['wind_direction'].get('value')
+                    if 'wind_speed' in period and period['wind_speed']:
+                        forecast_item['wind_speed'] = period['wind_speed'].get('value')
+                    if 'visibility' in period and period['visibility']:
+                        forecast_item['visibility'] = period['visibility'].get('value')
+
+                    result['forecast'].append(forecast_item)
+
+            return result
+        except Exception as e:
+            print(f"Error parsing TAF: {e}")
+            return {
+                'station': data.get('station', 'N/A'),
+                'error': str(e),
+                'raw': data.get('raw', ''),
+                'forecast': []
+            }
+
+    def _get_demo_taf(self, airport_code: str) -> Dict:
+        """Generate demo TAF data"""
+        return {
+            'station': airport_code,
+            'time': 'DEMO',
+            'raw': f'{airport_code} DEMO TAF',
+            'forecast': [
+                {'type': 'FM', 'wind_direction': 270, 'wind_speed': 10, 'visibility': 10.0, 'flight_rules': 'VFR'},
+                {'type': 'FM', 'wind_direction': 180, 'wind_speed': 15, 'visibility': 5.0, 'flight_rules': 'MVFR'},
+                {'type': 'FM', 'wind_direction': 90, 'wind_speed': 20, 'visibility': 3.0, 'flight_rules': 'IFR'},
+            ]
+        }
+
     def _get_demo_data(self, airport_code: str) -> Dict:
         """
         Generate demo weather data for testing without API

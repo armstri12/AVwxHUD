@@ -11,7 +11,7 @@ from typing import Optional, Tuple
 class SimulatorDisplay:
     """Pygame-based LED matrix simulator with realistic LED rendering"""
 
-    def __init__(self, width: int = 64, height: int = 32, pixel_size: int = 10, led_style: str = 'round'):
+    def __init__(self, width: int = 64, height: int = 64, pixel_size: int = 10, led_style: str = 'round'):
         """
         Initialize simulator
         Args:

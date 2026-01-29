@@ -41,8 +41,8 @@ Flight Categories (color coded):
     parser.add_argument(
         '--size',
         type=int,
-        default=20,
-        help='Size of each LED pixel in pixels (default: 20 for ~5mm pitch)'
+        default=12,
+        help='Size of each LED pixel in pixels (default: 12 for ~3mm pitch)'
     )
 
     parser.add_argument(
@@ -77,8 +77,8 @@ Flight Categories (color coded):
     parser.add_argument(
         '--height',
         type=int,
-        default=32,
-        help='Matrix height (default: 32)'
+        default=64,
+        help='Matrix height (default: 64)'
     )
 
     args = parser.parse_args()
