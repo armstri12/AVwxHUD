@@ -58,21 +58,23 @@ class AviationIcons:
     @staticmethod
     def get_sun(frame: int = 0) -> List[List[int]]:
         """
-        Animated sun icon (10x10 pixels)
+        Animated sun icon (11x11 pixels)
         Args:
-            frame: Animation frame (0-7) for rotating rays
+            frame: Animation frame (0-7) for subtle animation
         """
+        # Cleaner sun with circular center and 8 rays
         sun = [
-            [0, 0, 0, 1, 0, 0, 1, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
-            [1, 0, 1, 1, 1, 1, 1, 1, 0, 1],
-            [0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
-            [0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
-            [1, 0, 1, 1, 1, 1, 1, 1, 0, 1],
-            [0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 1, 0, 0, 1, 0, 0, 0],
+            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],  # Top ray
+            [0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0],  # Diagonal rays
+            [0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0],
+            [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
+            [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+            [1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1],  # Middle with side rays
+            [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+            [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
+            [0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0],
+            [0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0],  # Diagonal rays
+            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],  # Bottom ray
         ]
         return sun
 
@@ -181,45 +183,62 @@ class AviationIcons:
         Args:
             direction_degrees: Wind direction in degrees (0-359)
         Returns:
-            List of (x, y) points for drawing arrow
+            List of (x, y) points for drawing a clear, visible arrow
         """
-        # This returns relative points for a 7-pixel long arrow
-        # pointing in the specified direction
-        # Simplified: returns center point and direction indicator
         import math
 
         rad = math.radians(direction_degrees)
-        length = 6
+        length = 8  # Longer arrow for better visibility
 
-        # Arrow points from center
+        # Arrow points from center outward
         end_x = int(length * math.sin(rad))
         end_y = int(-length * math.cos(rad))
 
-        # Simple line points
         points = []
+
+        # Draw thicker line by adding parallel points
+        # Calculate perpendicular offset for thickness
+        perp_rad = rad + math.pi / 2
+        offset = 0.5
+        offset_x = int(offset * math.sin(perp_rad))
+        offset_y = int(-offset * math.cos(perp_rad))
+
+        # Main arrow shaft (thicker)
         steps = max(abs(end_x), abs(end_y), 1)
         for i in range(steps + 1):
-            x = int(i * end_x / steps)
-            y = int(i * end_y / steps)
+            t = i / steps
+            x = int(t * end_x)
+            y = int(t * end_y)
+            # Add center line
             points.append((x, y))
+            # Add parallel lines for thickness (only for first 80% of arrow)
+            if t < 0.8:
+                points.append((x + offset_x, y + offset_y))
+                points.append((x - offset_x, y - offset_y))
 
-        # Add arrowhead
-        arrowhead_angle = 25
-        arrowhead_length = 2
+        # Larger arrowhead for better visibility
+        arrowhead_angle = 35
+        arrowhead_length = 3
 
         left_rad = rad - math.radians(arrowhead_angle)
         right_rad = rad + math.radians(arrowhead_angle)
 
-        left_x = end_x - int(arrowhead_length * math.sin(left_rad))
-        left_y = end_y + int(arrowhead_length * math.cos(left_rad))
+        # Left side of arrowhead
+        for i in range(4):  # Multiple points for thicker arrowhead
+            t = i / 3
+            left_x = end_x - int(t * arrowhead_length * math.sin(left_rad))
+            left_y = end_y + int(t * arrowhead_length * math.cos(left_rad))
+            points.append((left_x, left_y))
 
-        right_x = end_x - int(arrowhead_length * math.sin(right_rad))
-        right_y = end_y + int(arrowhead_length * math.cos(right_rad))
+        # Back to tip
+        points.append((end_x, end_y))
 
-        points.append((end_x, end_y))
-        points.append((left_x, left_y))
-        points.append((end_x, end_y))
-        points.append((right_x, right_y))
+        # Right side of arrowhead
+        for i in range(4):
+            t = i / 3
+            right_x = end_x - int(t * arrowhead_length * math.sin(right_rad))
+            right_y = end_y + int(t * arrowhead_length * math.cos(right_rad))
+            points.append((right_x, right_y))
 
         return points
 
