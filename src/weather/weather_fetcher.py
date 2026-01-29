@@ -68,6 +68,12 @@ class WeatherFetcher:
             else:
                 result['temperature'] = None
 
+            # Dew point
+            if 'dewpoint' in data and data['dewpoint']:
+                result['dewpoint'] = data['dewpoint'].get('value', None)
+            else:
+                result['dewpoint'] = None
+
             # Wind
             if 'wind_direction' in data and data['wind_direction']:
                 result['wind_direction'] = data['wind_direction'].get('value', None)
@@ -84,6 +90,15 @@ class WeatherFetcher:
                 result['visibility'] = data['visibility'].get('value', None)
             else:
                 result['visibility'] = None
+
+            # Ceiling (lowest broken or overcast layer)
+            result['ceiling'] = None
+            if 'clouds' in data and data['clouds']:
+                for cloud in data['clouds']:
+                    if cloud and cloud.get('type') in ['BKN', 'OVC']:
+                        if cloud.get('altitude') is not None:
+                            result['ceiling'] = cloud['altitude'] * 100  # Convert to feet AGL
+                            break
 
             # Altimeter
             if 'altimeter' in data and data['altimeter']:
@@ -212,9 +227,11 @@ class WeatherFetcher:
             {
                 'flight_rules': 'VFR',
                 'temperature': 22,
+                'dewpoint': 14,
                 'wind_speed': 8,
                 'wind_direction': 270,
                 'visibility': 10.0,
+                'ceiling': None,
                 'altimeter': 30.12,
                 'conditions': [],
                 'clouds': [{'type': 'FEW', 'altitude': 50, 'repr': 'FEW050'}]
@@ -222,9 +239,11 @@ class WeatherFetcher:
             {
                 'flight_rules': 'MVFR',
                 'temperature': 15,
+                'dewpoint': 12,
                 'wind_speed': 12,
                 'wind_direction': 180,
                 'visibility': 5.0,
+                'ceiling': 2500,
                 'altimeter': 29.92,
                 'conditions': ['BR'],
                 'clouds': [{'type': 'BKN', 'altitude': 25, 'repr': 'BKN025'}]
@@ -232,9 +251,11 @@ class WeatherFetcher:
             {
                 'flight_rules': 'IFR',
                 'temperature': 8,
+                'dewpoint': 7,
                 'wind_speed': 18,
                 'wind_direction': 90,
                 'visibility': 2.0,
+                'ceiling': 1200,
                 'altimeter': 29.75,
                 'conditions': ['RA'],
                 'clouds': [{'type': 'OVC', 'altitude': 12, 'repr': 'OVC012'}]
@@ -242,9 +263,11 @@ class WeatherFetcher:
             {
                 'flight_rules': 'VFR',
                 'temperature': 28,
+                'dewpoint': 18,
                 'wind_speed': 5,
                 'wind_direction': 45,
                 'visibility': 10.0,
+                'ceiling': None,
                 'altimeter': 30.25,
                 'conditions': [],
                 'clouds': [{'type': 'SCT', 'altitude': 80, 'repr': 'SCT080'}]
@@ -252,9 +275,11 @@ class WeatherFetcher:
             {
                 'flight_rules': 'MVFR',
                 'temperature': -2,
+                'dewpoint': -4,
                 'wind_speed': 15,
                 'wind_direction': 360,
                 'visibility': 4.0,
+                'ceiling': 2000,
                 'altimeter': 30.05,
                 'conditions': ['SN'],
                 'clouds': [{'type': 'OVC', 'altitude': 20, 'repr': 'OVC020'}]
@@ -272,9 +297,11 @@ class WeatherFetcher:
             'flight_rules': scenario['flight_rules'],
             'raw': f'{airport_code} DEMO MODE',
             'temperature': scenario['temperature'],
+            'dewpoint': scenario['dewpoint'],
             'wind_direction': scenario['wind_direction'],
             'wind_speed': scenario['wind_speed'],
             'visibility': scenario['visibility'],
+            'ceiling': scenario['ceiling'],
             'altimeter': scenario['altimeter'],
             'clouds': scenario['clouds'],
             'conditions': scenario['conditions']
