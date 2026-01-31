@@ -171,21 +171,41 @@ class WeatherFetcher:
 
             # Get forecast periods
             if 'forecast' in data and data['forecast']:
-                for period in data['forecast'][:3]:  # First 3 periods
+                for period in data['forecast'][:5]:  # First 5 periods
                     forecast_item = {
                         'type': period.get('type', 'FM'),
                         'wind_direction': None,
                         'wind_speed': None,
                         'visibility': None,
-                        'flight_rules': period.get('flight_rules', 'UNKNOWN')
+                        'ceiling': None,
+                        'flight_rules': period.get('flight_rules', 'UNKNOWN'),
+                        'start_time': None,
+                        'end_time': None
                     }
 
+                    # Extract time period
+                    if 'start_time' in period and period['start_time']:
+                        forecast_item['start_time'] = period['start_time'].get('repr', '')
+                    if 'end_time' in period and period['end_time']:
+                        forecast_item['end_time'] = period['end_time'].get('repr', '')
+
+                    # Wind
                     if 'wind_direction' in period and period['wind_direction']:
                         forecast_item['wind_direction'] = period['wind_direction'].get('value')
                     if 'wind_speed' in period and period['wind_speed']:
                         forecast_item['wind_speed'] = period['wind_speed'].get('value')
+
+                    # Visibility
                     if 'visibility' in period and period['visibility']:
                         forecast_item['visibility'] = period['visibility'].get('value')
+
+                    # Ceiling (lowest BKN or OVC)
+                    if 'clouds' in period and period['clouds']:
+                        for cloud in period['clouds']:
+                            if cloud and cloud.get('type') in ['BKN', 'OVC']:
+                                if cloud.get('altitude') is not None:
+                                    forecast_item['ceiling'] = cloud['altitude'] * 100
+                                    break
 
                     result['forecast'].append(forecast_item)
 
@@ -200,16 +220,81 @@ class WeatherFetcher:
             }
 
     def _get_demo_taf(self, airport_code: str) -> Dict:
-        """Generate demo TAF data"""
+        """Generate demo TAF data with realistic times"""
+        from datetime import datetime, timedelta
+
+        # Get current UTC time
+        now_utc = datetime.utcnow()
+
+        # Generate forecast periods at 3-hour intervals
+        periods = []
+        for i in range(5):
+            period_time = now_utc + timedelta(hours=i*3)
+            start_time = period_time.strftime("%H%M")
+
+            # Vary conditions for each period
+            if i == 0:
+                period = {
+                    'type': 'FM',
+                    'wind_direction': 270,
+                    'wind_speed': 10,
+                    'visibility': 10.0,
+                    'ceiling': None,
+                    'flight_rules': 'VFR',
+                    'start_time': start_time,
+                    'end_time': None
+                }
+            elif i == 1:
+                period = {
+                    'type': 'FM',
+                    'wind_direction': 240,
+                    'wind_speed': 12,
+                    'visibility': 6.0,
+                    'ceiling': 3000,
+                    'flight_rules': 'MVFR',
+                    'start_time': start_time,
+                    'end_time': None
+                }
+            elif i == 2:
+                period = {
+                    'type': 'FM',
+                    'wind_direction': 180,
+                    'wind_speed': 15,
+                    'visibility': 3.0,
+                    'ceiling': 1500,
+                    'flight_rules': 'IFR',
+                    'start_time': start_time,
+                    'end_time': None
+                }
+            elif i == 3:
+                period = {
+                    'type': 'FM',
+                    'wind_direction': 150,
+                    'wind_speed': 18,
+                    'visibility': 2.0,
+                    'ceiling': 800,
+                    'flight_rules': 'IFR',
+                    'start_time': start_time,
+                    'end_time': None
+                }
+            else:
+                period = {
+                    'type': 'FM',
+                    'wind_direction': 200,
+                    'wind_speed': 14,
+                    'visibility': 5.0,
+                    'ceiling': 2500,
+                    'flight_rules': 'MVFR',
+                    'start_time': start_time,
+                    'end_time': None
+                }
+            periods.append(period)
+
         return {
             'station': airport_code,
             'time': 'DEMO',
             'raw': f'{airport_code} DEMO TAF',
-            'forecast': [
-                {'type': 'FM', 'wind_direction': 270, 'wind_speed': 10, 'visibility': 10.0, 'flight_rules': 'VFR'},
-                {'type': 'FM', 'wind_direction': 180, 'wind_speed': 15, 'visibility': 5.0, 'flight_rules': 'MVFR'},
-                {'type': 'FM', 'wind_direction': 90, 'wind_speed': 20, 'visibility': 3.0, 'flight_rules': 'IFR'},
-            ]
+            'forecast': periods
         }
 
     def _get_demo_data(self, airport_code: str) -> Dict:
